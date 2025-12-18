@@ -1,42 +1,40 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
 import joblib
-import sys
-import os
+import gradio as gr
 import pandas as pd
+import os
+import sys
 
-# Allow imports from parent folder
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# Allow imports from ML folder
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from ML.feature_extractor import extract_features
-
-app = Flask(__name__)
-CORS(app)
 
 # Load model once
 model = joblib.load("ML/phishing_model.pkl")
 
-@app.route("/check_url", methods=["POST"])
-def check_url():
-    data = request.get_json()
-
-    if not data or "url" not in data:
-        return jsonify({"error": "No URL provided"}), 400
-
-    url = data["url"]
+def check_url(url):
+    if not url:
+        return "❌ Please enter a URL"
 
     try:
         features = extract_features(url)
         X = pd.DataFrame([features])
-        prediction = 1
+        prediction = model.predict(X)[0]
 
-        return jsonify({
-            "url": url,
-            "phishing": bool(prediction)
-        })
+        if prediction == 1:
+            return "⚠️ Phishing Website"
+        else:
+            return "✅ Legitimate Website"
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return f"Error: {str(e)}"
 
-if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+interface = gr.Interface(
+    fn=check_url,
+    inputs=gr.Textbox(label="Enter URL"),
+    outputs=gr.Textbox(label="Result"),
+    title="Phishing URL Detection System",
+    description="AI-based phishing detection using Machine Learning"
+)
+
+interface.launch()
