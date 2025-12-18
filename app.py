@@ -1,16 +1,12 @@
+import os
 import joblib
 import gradio as gr
 import pandas as pd
-import os
-import sys
-
-# Allow imports from ML folder
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-
-from ML.feature_extractor import extract_features
+from ML.feature_extractor import extract_features  # HF-safe import
 
 # Load model once
-model = joblib.load("ML/phishing_model.pkl")
+MODEL_PATH = os.path.join("ML", "phishing_model.pkl")
+model = joblib.load(MODEL_PATH)
 
 def check_url(url):
     if not url:
@@ -21,20 +17,19 @@ def check_url(url):
         X = pd.DataFrame([features])
         prediction = model.predict(X)[0]
 
-        if prediction == 1:
-            return "⚠️ Phishing Website"
-        else:
-            return "✅ Legitimate Website"
+        return "⚠️ Phishing Website" if prediction == 1 else "✅ Legitimate Website"
 
     except Exception as e:
         return f"Error: {str(e)}"
 
+# Gradio Interface
 interface = gr.Interface(
     fn=check_url,
-    inputs=gr.Textbox(label="Enter URL"),
+    inputs=gr.Textbox(label="Enter URL", placeholder="https://example.com"),
     outputs=gr.Textbox(label="Result"),
     title="Phishing URL Detection System",
     description="AI-based phishing detection using Machine Learning"
 )
 
+# HF Spaces uses server_name="0.0.0.0" and server_port=7860 automatically
 interface.launch()
